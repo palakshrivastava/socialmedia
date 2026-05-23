@@ -11,16 +11,11 @@ import java.util.List;
 @Data
 @Document(collection = "posts")
 public class Post {
-
     @Id
     private String id;
-
     private Long userId;
-
     private String caption;
-
     private String imageUrl;
-
     private Date createdAt = new Date();
 
     // Likes
