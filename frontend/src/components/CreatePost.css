@@ -1,0 +1,84 @@
+.create-post-card {
+  background: rgba(255, 255, 255, 0.96);
+  border-radius: 1.1rem;
+  box-shadow: 0 12px 30px rgba(30, 64, 175, 0.08);
+  border: 1px solid #dbe4ff;
+  padding: 1rem;
+}
+
+.create-post-header {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  margin-bottom: 0.85rem;
+}
+
+.create-post-avatar {
+  width: 2.4rem;
+  height: 2.4rem;
+  display: inline-grid;
+  place-items: center;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #0f172a, #2563eb);
+  color: #fff;
+  font-weight: 700;
+}
+
+.create-post-title,
+.create-post-subtitle {
+  margin: 0;
+}
+
+.create-post-title {
+  font-weight: 700;
+}
+
+.create-post-subtitle {
+  color: #6b7280;
+  font-size: 0.9rem;
+}
+
+.create-post-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.create-post-form textarea,
+.create-post-form input {
+  width: 100%;
+  border-radius: 1rem;
+  border: 1px solid #cbd5e1;
+  padding: 0.9rem 1rem;
+  font: inherit;
+  box-sizing: border-box;
+}
+
+.create-post-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+}
+
+.create-post-actions span {
+  color: #6b7280;
+  font-size: 0.95rem;
+}
+
+.create-post-actions button {
+  border: 0;
+  border-radius: 999px;
+  padding: 0.85rem 1.1rem;
+  background: linear-gradient(135deg, #2563eb, #8b5cf6);
+  color: #fff;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+@media (max-width: 650px) {
+  .create-post-actions {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
