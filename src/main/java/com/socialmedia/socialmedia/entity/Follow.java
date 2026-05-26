@@ -4,6 +4,7 @@ import lombok.Data;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
+/** MongoDB Atlas — follow graph; ids reference {@code users.userId}. */
 @Data
 @Document(collection = "follows")
 public class Follow {

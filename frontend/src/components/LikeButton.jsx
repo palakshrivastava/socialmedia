@@ -2,10 +2,17 @@ import './LikeButton.css'
 
 export default function LikeButton({ liked, likes, onToggle }) {
   return (
-    <button type="button" className={`like-button ${liked ? 'liked' : ''}`} onClick={onToggle}>
-      <span aria-hidden="true">♥</span>
-      <span>{liked ? 'Liked' : 'Like'}</span>
-      <strong>{likes}</strong>
+    <button
+      type="button"
+      className={`like-btn${liked ? ' like-btn--liked' : ''}`}
+      onClick={onToggle}
+      aria-pressed={liked}
+    >
+      <span className="like-btn__icon" aria-hidden>
+        {liked ? '♥' : '♡'}
+      </span>
+      <span className="like-btn__label">{liked ? 'Liked' : 'Like'}</span>
+      {likes > 0 ? <span className="like-btn__count">{likes}</span> : null}
     </button>
   )
 }

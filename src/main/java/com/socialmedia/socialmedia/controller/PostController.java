@@ -50,6 +50,6 @@ public class PostController {
             @RequestBody CommentRequest request
     ) {
 
-        return postService.addComment(postId, request.getComment());
+        return postService.addComment(postId, request.getUserId(), request.getComment());
     }
 }

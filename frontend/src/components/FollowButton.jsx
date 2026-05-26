@@ -1,10 +1,12 @@
 import './FollowButton.css'
 
-export default function FollowButton({ isFollowing, onToggle }) {
+export default function FollowButton({ isFollowing, onToggle, size }) {
   return (
     <button
       type="button"
-      className={isFollowing ? 'follow-button follow-button--active' : 'follow-button'}
+      className={`follow-btn${isFollowing ? ' follow-btn--following' : ''}${
+        size === 'sm' ? ' follow-btn--sm' : ''
+      }`}
       onClick={onToggle}
     >
       {isFollowing ? 'Following' : 'Follow'}

@@ -1,9 +1,11 @@
 package com.socialmedia.socialmedia.service;
 
+import com.socialmedia.socialmedia.document.UserProfile;
 import com.socialmedia.socialmedia.dto.PostRequest;
 import com.socialmedia.socialmedia.entity.Post;
+import com.socialmedia.socialmedia.entity.PostComment;
 import com.socialmedia.socialmedia.repository.PostRepository;
-
+import com.socialmedia.socialmedia.repository.UserProfileRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -15,48 +17,59 @@ public class PostService {
     @Autowired
     private PostRepository postRepository;
 
-    // CREATE POST
+    @Autowired
+    private UserProfileRepository userProfileRepository;
+
+    @Autowired
+    private NotificationService notificationService;
+
     public Post createPost(PostRequest request) {
-
         Post post = new Post();
-
         post.setUserId(request.getUserId());
         post.setCaption(request.getCaption());
         post.setImageUrl(request.getImageUrl());
-
         return postRepository.save(post);
     }
 
-    // GET ALL POSTS
     public List<Post> getAllPosts() {
-
         return postRepository.findAll();
     }
 
-    // LIKE / UNLIKE POST
     public Post toggleLike(String postId, Long userId) {
-
         Post post = postRepository.findById(postId).orElseThrow();
 
-        // already liked
-        if(post.getLikes().contains(userId)) {
+        boolean alreadyLiked = post.getLikes().contains(userId);
 
+        if (alreadyLiked) {
             post.getLikes().remove(userId);
-
         } else {
-
             post.getLikes().add(userId);
+            userProfileRepository.findByUserId(userId).ifPresent(actor ->
+                    notificationService.notifyLike(
+                            post.getUserId(),
+                            userId,
+                            actor.getName(),
+                            postId
+                    )
+            );
         }
 
         return postRepository.save(post);
     }
 
-    // ADD COMMENT
-    public Post addComment(String postId, String comment) {
-
+    public Post addComment(String postId, Long userId, String text) {
         Post post = postRepository.findById(postId).orElseThrow();
 
-        post.getComments().add(comment);
+        UserProfile actor = userProfileRepository.findByUserId(userId).orElse(null);
+        String authorName = actor != null ? actor.getName() : "Someone";
+
+        PostComment comment = new PostComment();
+        comment.setUserId(userId);
+        comment.setAuthorName(authorName);
+        comment.setText(text);
+        post.addComment(comment);
+
+        notificationService.notifyComment(post.getUserId(), userId, authorName, postId, text);
 
         return postRepository.save(post);
     }

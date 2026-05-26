@@ -1,175 +1,152 @@
 import { useState } from 'react'
-
+import { resolveMediaUrl } from '../services/api'
 import FollowButton from './FollowButton'
 import LikeButton from './LikeButton'
-
 import './PostCard.css'
+
+function formatTime(dateString) {
+  if (!dateString) return 'Just now'
+  const date = new Date(dateString)
+  const diffMins = Math.floor((Date.now() - date) / 60000)
+  if (diffMins < 1) return 'Just now'
+  if (diffMins < 60) return `${diffMins}m`
+  const diffHours = Math.floor(diffMins / 60)
+  if (diffHours < 24) return `${diffHours}h`
+  const diffDays = Math.floor(diffHours / 24)
+  if (diffDays < 7) return `${diffDays}d`
+  return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+}
+
+function normalizeComment(item) {
+  if (typeof item === 'string') {
+    return { authorName: 'Member', text: item }
+  }
+  return {
+    authorName: item.authorName || 'Member',
+    text: item.text || '',
+  }
+}
 
 export default function PostCard({
   post,
   users = [],
+  currentUserId,
+  followingIds = [],
+  feedLabel,
   onToggleLike,
   onAddComment,
+  onToggleFollow,
+  showFollowButton = true,
 }) {
+  const [comment, setComment] = useState('')
+  const [showComments, setShowComments] = useState(false)
 
-  const [comment, setComment] =
-    useState('')
-
-  // FIND USER
-  const user =
-    users.find(
-      (u) => u.id === post.userId
-    ) || {
+  const author =
+    users.find((item) => item.id === post.userId) || {
       name: 'Unknown',
       username: 'unknown',
     }
 
-  // USER AVATAR
-  const avatar =
-    user.name.charAt(0)
+  const avatar = author.name?.charAt(0)?.toUpperCase() || '?'
+  const isLiked = post.likes?.includes(currentUserId) ?? false
+  const isFollowing = followingIds.includes(post.userId)
+  const isOwnPost = post.userId === currentUserId
+  const commentCount = post.comments?.length || 0
+  const imageSrc = resolveMediaUrl(post.imageUrl)
 
   const handleComment = () => {
-
-    if (!comment.trim()) {
-      return
-    }
-
-    onAddComment(
-      post.id,
-      comment
-    )
-
+    if (!comment.trim()) return
+    onAddComment(post.id, comment.trim())
     setComment('')
+    setShowComments(true)
   }
 
   return (
+    <article className="post card">
+      {feedLabel ? <span className="post__feed-label">{feedLabel}</span> : null}
 
-    <article className="post-card">
-
-      {/* HEADER */}
-      <div className="post-header">
-
-        <div className="post-author-row">
-
-          <div className="post-avatar">
-
-            {avatar}
-
-          </div>
-
-          <div>
-
-            <p className="post-author-name">
-
-              {user.name}
-
+      <header className="post__header">
+        <div className="post__author">
+          <span className="avatar avatar--md">{avatar}</span>
+          <div className="post__author-text">
+            <p className="post__name">{author.name}</p>
+            <p className="post__meta">
+              @{author.username} · {formatTime(post.createdAt)}
             </p>
-
-            <p className="post-author-meta">
-
-              @{user.username} • {
-
-                new Date(
-                  post.createdAt
-                ).toLocaleDateString()
-
-              }
-
-            </p>
-
           </div>
-
         </div>
 
-        <FollowButton
-          isFollowing={false}
-          onToggle={() =>
-            console.log('follow')
-          }
-        />
+        {showFollowButton && !isOwnPost ? (
+          <FollowButton
+            isFollowing={isFollowing}
+            onToggle={() => onToggleFollow?.(post.userId)}
+            size="sm"
+          />
+        ) : null}
+      </header>
 
-      </div>
+      {post.caption ? <p className="post__caption">{post.caption}</p> : null}
 
-      {/* CAPTION */}
-      <p className="post-content">
-
-        {post.caption}
-
-      </p>
-
-      {/* IMAGE */}
-      {post.imageUrl ? (
-
-        <img
-          className="post-image"
-          src={post.imageUrl}
-          alt="Post"
-        />
-
+      {imageSrc ? (
+        <div className="post__media">
+          <img src={imageSrc} alt="" loading="lazy" />
+        </div>
       ) : null}
 
-      {/* ACTIONS */}
-      <div className="post-actions">
-
-        <LikeButton
-
-          liked={false}
-
-          likes={
-            post.likes?.length || 0
-          }
-
-          onToggle={onToggleLike}
-
-        />
-
-      </div>
-
-      {/* COMMENTS */}
-      <div className="comments-section">
-
-        <h4>
-          Comments
-        </h4>
-
-        <div className="comments-list">
-
-          {post.comments?.map(
-            (item, index) => (
-
-              <p
-                key={index}
-                className="comment-item"
-              >
-                {item}
-              </p>
-            )
-          )}
-
-        </div>
-
-        {/* ADD COMMENT */}
-        <div className="comment-input-box">
-
-          <input
-            type="text"
-            placeholder="Add a comment..."
-            value={comment}
-            onChange={(e) =>
-              setComment(e.target.value)
-            }
+      <footer className="post__footer">
+        <div className="post__actions">
+          <LikeButton
+            liked={isLiked}
+            likes={post.likes?.length || 0}
+            onToggle={onToggleLike}
           />
-
           <button
-            onClick={handleComment}
+            type="button"
+            className="post__action-btn"
+            onClick={() => setShowComments((v) => !v)}
           >
-            Post
+            <span aria-hidden>💬</span>
+            <span>{commentCount > 0 ? `${commentCount} comments` : 'Comment'}</span>
           </button>
-
         </div>
 
-      </div>
+        {(showComments || commentCount > 0) && (
+          <div className="post__comments">
+            {commentCount > 0 ? (
+              <ul className="post__comment-list">
+                {post.comments.map((item, index) => {
+                  const c = normalizeComment(item)
+                  return (
+                    <li key={`${post.id}-c-${index}`}>
+                      <strong>{c.authorName}</strong> {c.text}
+                    </li>
+                  )
+                })}
+              </ul>
+            ) : (
+              <p className="post__no-comments">No comments yet.</p>
+            )}
 
+            <div className="post__comment-form">
+              <input
+                type="text"
+                placeholder="Write a comment…"
+                value={comment}
+                onChange={(e) => setComment(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleComment()}
+              />
+              <button
+                type="button"
+                className="btn btn--primary btn--sm"
+                onClick={handleComment}
+                disabled={!comment.trim()}
+              >
+                Reply
+              </button>
+            </div>
+          </div>
+        )}
+      </footer>
     </article>
   )
 }
