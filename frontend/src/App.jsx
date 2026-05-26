@@ -1,5 +1,7 @@
 import { Routes, Route } from 'react-router-dom'
 
+import ProtectedRoute from './components/ProtectedRoute'
+import LandingPage from './pages/LandingPage'
 import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
 import HomeFeedPage from './pages/HomeFeedPage'
@@ -12,28 +14,34 @@ function App() {
 
     <Routes>
 
-      {/* LOGIN PAGE */}
-      <Route
-        path="/"
-        element={<LoginPage />}
-      />
+      <Route path="/" element={<LandingPage />} />
+      <Route path="/login" element={<LoginPage />} />
+      <Route path="/register" element={<RegisterPage />} />
 
-      {/* REGISTER PAGE */}
-      <Route
-        path="/register"
-        element={<RegisterPage />}
-      />
-
-      {/* FEED PAGE */}
       <Route
         path="/feed"
-        element={<HomeFeedPage />}
+        element={
+          <ProtectedRoute>
+            <HomeFeedPage />
+          </ProtectedRoute>
+        }
       />
 
-      {/* PROFILE PAGE */}
       <Route
         path="/profile"
-        element={<ProfilePage />}
+        element={
+          <ProtectedRoute>
+            <ProfilePage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/profile/:userId"
+        element={
+          <ProtectedRoute>
+            <ProfilePage />
+          </ProtectedRoute>
+        }
       />
 
       {/* NOT FOUND PAGE */}

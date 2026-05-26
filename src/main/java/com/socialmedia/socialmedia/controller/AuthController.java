@@ -1,30 +1,34 @@
 package com.socialmedia.socialmedia.controller;
 
+import com.socialmedia.socialmedia.dto.AuthResponse;
 import com.socialmedia.socialmedia.dto.LoginRequest;
 import com.socialmedia.socialmedia.dto.SignupRequest;
 import com.socialmedia.socialmedia.service.UserService;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/auth")
-@CrossOrigin("*")
+@CrossOrigin(originPatterns = {"http://localhost:*", "http://127.0.0.1:*"})
 public class AuthController {
 
     @Autowired
     private UserService userService;
 
-    // SIGNUP API
     @PostMapping("/signup")
-    public String signup(@RequestBody SignupRequest request) {
-
-        return userService.signup(request);
+    public ResponseEntity<AuthResponse> signup(@Valid @RequestBody SignupRequest request) {
+        userService.signup(request);
+        return ResponseEntity.ok(new AuthResponse("User registered successfully", null));
     }
 
-    // LOGIN API
     @PostMapping("/login")
-    public String login(@RequestBody LoginRequest request) {
-
-        return userService.login(request);
+    public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest request) {
+        return ResponseEntity.ok(userService.login(request));
     }
 }

@@ -1,129 +1,115 @@
 import FollowButton from './FollowButton'
-
+import { NavLink } from 'react-router-dom'
 import './Sidebar.css'
 
 export default function Sidebar({
   currentUser,
+  suggestions = [],
   onToggleFollow,
-  users = [],
+  onSelectFeedTab,
+  onStatClick,
 }) {
+  const following = currentUser?.following || []
 
   return (
-
-    <aside className="sidebar-shell">
-
-      {/* COMMUNITY */}
-      <section className="sidebar-card">
-
-        <p className="eyebrow">
-          Your community
-        </p>
-
-        <h3>
-          Stay connected
-        </h3>
-
-        <div className="sidebar-stats">
-
-          <div>
-
-            <strong>
-              {currentUser?.following?.length || 0}
-            </strong>
-
-            <span>
-              Following
-            </span>
-
-          </div>
-
-          <div>
-
-            <strong>
-              {currentUser?.followers || 0}
-            </strong>
-
-            <span>
-              Followers
-            </span>
-
-          </div>
-
-        </div>
-
+    <aside className="sidebar">
+      <section className="sidebar__card card">
+        <nav className="sidebar__nav" aria-label="Sidebar navigation">
+          <NavLink to="/feed" end className="sidebar__nav-link">
+            Home feed
+          </NavLink>
+          <button
+            type="button"
+            className="sidebar__nav-link"
+            onClick={() => onSelectFeedTab?.('for-you')}
+          >
+            For you
+          </button>
+          <button
+            type="button"
+            className="sidebar__nav-link"
+            onClick={() => onSelectFeedTab?.('following')}
+          >
+            Following feed
+          </button>
+          <button
+            type="button"
+            className="sidebar__nav-link"
+            onClick={() => onSelectFeedTab?.('discover')}
+          >
+            Discover people
+          </button>
+          <NavLink to="/profile" className="sidebar__nav-link">
+            My profile
+          </NavLink>
+        </nav>
       </section>
 
-      {/* FOLLOW USERS */}
-      <section className="sidebar-card">
+      <section className="sidebar__card card">
+        <div className="sidebar__user">
+          <span className="avatar avatar--md avatar--ring">
+            {currentUser?.name?.charAt(0)?.toUpperCase() || '?'}
+          </span>
+          <div>
+            <p className="sidebar__user-name">{currentUser?.name}</p>
+            <p className="sidebar__user-handle">
+              @{currentUser?.username || 'you'}
+            </p>
+          </div>
+        </div>
 
-        <p className="eyebrow">
-          Follow People
-        </p>
+        <div className="sidebar__stats">
+          <button
+            type="button"
+            className="sidebar__stat btn-reset"
+            onClick={() => onStatClick?.('followers')}
+          >
+            <strong>{currentUser?.followers || 0}</strong>
+            <span>Followers</span>
+          </button>
+          <button
+            type="button"
+            className="sidebar__stat btn-reset"
+            onClick={() => onStatClick?.('following')}
+          >
+            <strong>{following.length}</strong>
+            <span>Following</span>
+          </button>
+        </div>
+      </section>
 
-        <div className="suggestions-list">
+      {suggestions.length > 0 ? (
+        <section className="sidebar__card card">
+          <div className="sidebar__head">
+            <h3>People you may know</h3>
+            <p>Like LinkedIn suggestions</p>
+          </div>
 
-          {users.map((user) => (
-
-            user.id !== currentUser.id && (
-
-              <div
-                key={user.id}
-                className="suggestion-row"
-              >
-
-                <div>
-
-                  <p className="suggestion-name">
-                    {user.name}
-                  </p>
-
-                  <small>
-                    @{user.username}
-                  </small>
-
+          <ul className="sidebar__suggestions">
+            {suggestions.map((person) => (
+              <li key={person.id} className="sidebar__suggestion">
+                <div className="sidebar__suggestion-info">
+                  <span className="avatar avatar--sm">
+                    {person.name?.charAt(0)?.toUpperCase()}
+                  </span>
+                  <div>
+                    <p className="sidebar__suggestion-name">{person.name}</p>
+                    <p className="sidebar__suggestion-handle">
+                      @{person.username}
+                    </p>
+                  </div>
                 </div>
 
                 <FollowButton
-                  isFollowing={
-                    currentUser.following.includes(
-                      user.id
-                    )
-                  }
-                  onToggle={() =>
-                    onToggleFollow(user.id)
-                  }
+                  isFollowing={following.includes(person.id)}
+                  onToggle={() => onToggleFollow(person.id)}
+                  size="sm"
                 />
-
-              </div>
-            )
-
-          ))}
-
-        </div>
-
-      </section>
-
-      {/* TRENDING */}
-      <section className="sidebar-card">
-
-        <p className="eyebrow">
-          Trending now
-        </p>
-
-        <ul className="trending-list">
-
-          <li>#DesignSystems</li>
-
-          <li>#CommunityBuilding</li>
-
-          <li>#MindfulUX</li>
-
-          <li>#FrontendWins</li>
-
-        </ul>
-
-      </section>
-
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
     </aside>
   )
 }

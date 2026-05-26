@@ -1,280 +1,253 @@
-import { useEffect, useState } from 'react'
-
+import { useCallback, useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import Navbar from '../components/Navbar'
 import SideBar from '../components/SideBar'
 import CreatePost from '../components/CreatePost'
 import PostCard from '../components/PostCard'
-
+import { useAuth } from '../context/AuthContext'
 import { socialApi } from '../services/socialApi'
-
+import FollowModal from '../components/FollowModal'
 import './HomeFeedPage.css'
 
+const FEED_TABS = [
+  { id: 'for-you', label: 'For you', hint: 'Following + discovery' },
+  { id: 'following', label: 'Following', hint: 'People you follow' },
+  { id: 'discover', label: 'Discover', hint: 'New voices' },
+]
+
 export default function HomeFeedPage() {
+  const { user } = useAuth()
+  const navigate = useNavigate()
 
+  const [feedMode, setFeedMode] = useState('for-you')
   const [posts, setPosts] = useState([])
+  const [users, setUsers] = useState([])
+  const [suggestions, setSuggestions] = useState([])
+  const [followingIds, setFollowingIds] = useState([])
+  const [followerCount, setFollowerCount] = useState(0)
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState('')
 
-  const [isLoading, setIsLoading] = useState(false)
+  const [showFollowModal, setShowFollowModal] = useState(false)
+  const [followModalType, setFollowModalType] = useState('followers')
+  const [followModalUserId, setFollowModalUserId] = useState(null)
 
-  // CURRENT USER
-  const [currentUser, setCurrentUser] = useState({
-    id: 1,
-    name: 'Palak',
-    username: 'palak',
-    followers: 10,
-    following: [],
-  })
-
-  // USERS
-  const users = [
-
-    { id: 1, name: 'Palak', username: 'palak' },
-
-    { id: 2, name: 'Rahul', username: 'rahul' },
-
-    { id: 3, name: 'Aman', username: 'aman' },
-
-    { id: 4, name: 'Priya', username: 'priya' },
-
-    { id: 5, name: 'Sneha', username: 'sneha' },
-
-    { id: 6, name: 'Karan', username: 'karan' },
-
-    { id: 7, name: 'Anjali', username: 'anjali' },
-
-    { id: 8, name: 'Rohit', username: 'rohit' },
-
-    { id: 9, name: 'Neha', username: 'neha' },
-
-    { id: 10, name: 'Arjun', username: 'arjun' },
-
-    { id: 11, name: 'Simran', username: 'simran' },
-
-    { id: 12, name: 'Yash', username: 'yash' },
-
-    { id: 13, name: 'Aditi', username: 'aditi' },
-
-    { id: 14, name: 'Harsh', username: 'harsh' },
-
-    { id: 15, name: 'Meera', username: 'meera' },
-
-    { id: 16, name: 'Dev', username: 'dev' },
-
-    { id: 17, name: 'Riya', username: 'riya' },
-
-    { id: 18, name: 'Aryan', username: 'aryan' },
-
-    { id: 19, name: 'Pooja', username: 'pooja' },
-
-    { id: 20, name: 'Kabir', username: 'kabir' },
-
-  ]
-
-  // LOAD POSTS
-  const loadFeed = async () => {
-
-    try {
-
-      setIsLoading(true)
-
-      const response =
-        await socialApi.fetchFeed()
-
-      setPosts(response.data)
-
-    } catch (error) {
-
-      console.log(error)
-
-    } finally {
-
-      setIsLoading(false)
-    }
+  const handleOpenFollowModal = (type) => {
+    setFollowModalType(type)
+    setFollowModalUserId(user.id)
+    setShowFollowModal(true)
   }
 
-  // LOAD POSTS
-  useEffect(() => {
+  const loadFeed = useCallback(
+    async (userId, mode) => {
+      const response = await socialApi.fetchFeed(userId, mode)
+      setPosts(response.data.posts || [])
+    },
+    []
+  )
 
-    loadFeed()
-
+  const loadUsers = useCallback(async () => {
+    const response = await socialApi.fetchUsers()
+    setUsers(response.data)
   }, [])
 
-  // CREATE POST
-  const handleCreatePost = async ({
-    content,
-    image
-  }) => {
+  const loadSuggestions = useCallback(async (userId) => {
+    const response = await socialApi.fetchSuggestions(userId, 8)
+    setSuggestions(response.data)
+  }, [])
+
+  const refreshCounts = useCallback(async (userId) => {
+    const { data } = await socialApi.syncSocial(userId)
+    setFollowerCount(data.followerCount || 0)
+    setFollowingIds(
+      (data.following || []).map((item) => item.followingId)
+    )
+  }, [])
+
+  const loadPageData = useCallback(async () => {
+    if (!user?.id) return
 
     try {
+      setIsLoading(true)
+      setError('')
+      await Promise.all([
+        loadFeed(user.id, feedMode),
+        loadUsers(),
+        loadSuggestions(user.id),
+        refreshCounts(user.id),
+      ])
+    } catch (loadError) {
+      console.error(loadError)
+      setError('Could not load your feed. Make sure the backend is running.')
+    } finally {
+      setIsLoading(false)
+    }
+  }, [user?.id, feedMode, loadFeed, loadUsers, loadSuggestions, refreshCounts])
 
+  useEffect(() => {
+    loadPageData()
+  }, [loadPageData])
+
+  const handleCreatePost = async ({ content, image }) => {
+    try {
       await socialApi.createPost({
-
-        userId:
-          Math.floor(Math.random() * 20) + 1,
-
+        userId: user.id,
         caption: content,
-
-        imageUrl: image,
+        imageUrl: image || null,
       })
-
-      await loadFeed()
-
-    } catch (error) {
-
-      console.log(error)
+      await loadFeed(user.id, feedMode)
+    } catch {
+      setError('Failed to publish your post.')
     }
   }
 
-  // LIKE POST
-  const handleToggleLike = async (
-    postId
-  ) => {
+  const handleToggleLike = async (postId) => {
+    await socialApi.toggleLike(postId, user.id)
+    await loadFeed(user.id, feedMode)
+  }
 
-    try {
+  const handleAddComment = async (postId, comment) => {
+    await socialApi.addComment(postId, user.id, comment)
+    await loadFeed(user.id, feedMode)
+  }
 
-      await socialApi.toggleLike(
-        postId,
-        currentUser.id
-      )
-
-      await loadFeed()
-
-    } catch (error) {
-
-      console.log(error)
+  const handleToggleFollow = async (followingId) => {
+    await socialApi.toggleFollow(user.id, followingId)
+    await refreshCounts(user.id)
+    await loadSuggestions(user.id)
+    if (feedMode === 'following') {
+      await loadFeed(user.id, feedMode)
     }
   }
 
-  // ADD COMMENT
-  const handleAddComment = async (
-    postId,
-    comment
-  ) => {
-
-    try {
-
-      await socialApi.addComment(
-        postId,
-        comment
-      )
-
-      await loadFeed()
-
-    } catch (error) {
-
-      console.log(error)
-    }
+  const handleSearchSelect = () => {
+    // Search in navbar navigates directly to profile page.
   }
 
-  // FOLLOW / UNFOLLOW
-  const handleToggleFollow = async (
-    followingId
-  ) => {
-
-    try {
-
-      await socialApi.toggleFollow(
-        currentUser.id,
-        followingId
-      )
-
-      if (
-        currentUser.following.includes(
-          followingId
-        )
-      ) {
-
-        setCurrentUser({
-
-          ...currentUser,
-
-          following:
-            currentUser.following.filter(
-              (id) =>
-                id !== followingId
-            )
-        })
-
-      } else {
-
-        setCurrentUser({
-
-          ...currentUser,
-
-          following: [
-            ...currentUser.following,
-            followingId
-          ]
-        })
-      }
-
-    } catch (error) {
-
-      console.log(error)
-    }
+  const getFeedLabel = (post) => {
+    if (feedMode !== 'for-you') return null
+    if (followingIds.includes(post.userId)) return 'Following'
+    return 'Suggested'
   }
+
+  const currentUser = {
+    ...user,
+    avatar: user?.name?.charAt(0)?.toUpperCase() || '?',
+    following: followingIds,
+    followers: followerCount,
+  }
+
+  const filteredPosts = posts
 
   if (isLoading) {
-
-    return <h1>Loading...</h1>
+    return (
+      <div className="app-page">
+        <Navbar onSearchSelect={handleSearchSelect} />
+        <div className="app-container feed-loading">
+          <div className="spinner" aria-hidden />
+          <p>Loading SkillMesh…</p>
+        </div>
+      </div>
+    )
   }
 
   return (
+    <div className="app-page">
+      <Navbar onSearchSelect={handleSearchSelect} />
 
-    <div className="page-shell">
-
-      <Navbar />
-
-      <main className="feed-layout">
-
-        <section className="feed-main">
-
-          <div className="hero-box">
-
-            <h1>
-              Welcome to SocialSphere 🚀
-            </h1>
-
-            <p>
-              Share your thoughts and connect with people.
+      <div className="app-container feed">
+        <main className="feed__main">
+          <header className="feed__hero card">
+            <div>
+              <p className="feed__eyebrow">Professional network</p>
+              <h1>Hi, {user.name.split(' ')[0]}</h1>
+            </div>
+            <p className="feed__stats">
+              <button
+                type="button"
+                className="feed__stat-btn"
+                onClick={() => handleOpenFollowModal('followers')}
+              >
+                <strong>{followerCount}</strong> followers
+              </button>
+              <span className="feed__stats-dot">·</span>
+              <button
+                type="button"
+                className="feed__stat-btn"
+                onClick={() => handleOpenFollowModal('following')}
+              >
+                <strong>{followingIds.length}</strong> following
+              </button>
             </p>
+          </header>
 
-          </div>
-
-          <CreatePost
-            currentUser={currentUser}
-            onCreate={handleCreatePost}
-          />
-
-          <div className="feed-posts">
-
-            {posts.map((post) => (
-
-              <PostCard
-                key={post.id}
-                post={post}
-                users={users}
-                onToggleLike={() =>
-                  handleToggleLike(post.id)
-                }
-                onAddComment={
-                  handleAddComment
-                }
-              />
-
+          <div className="feed__tabs" role="tablist">
+            {FEED_TABS.map((tab) => (
+              <button
+                key={tab.id}
+                type="button"
+                role="tab"
+                aria-selected={feedMode === tab.id}
+                className={`feed__tab${feedMode === tab.id ? ' feed__tab--active' : ''}`}
+                onClick={() => {
+                  setFeedMode(tab.id)
+                }}
+              >
+                <span>{tab.label}</span>
+                <small>{tab.hint}</small>
+              </button>
             ))}
-
           </div>
 
-        </section>
+          {error ? <div className="alert alert--error">{error}</div> : null}
+
+          <CreatePost currentUser={currentUser} onCreate={handleCreatePost} />
+
+          <div className="feed__posts">
+            {filteredPosts.length === 0 ? (
+              <div className="alert alert--empty">
+                <p>
+                  {feedMode === 'following'
+                    ? 'Follow people to see their posts here.'
+                    : 'No posts yet. Try Discover and connect with more creators.'}
+                </p>
+              </div>
+            ) : (
+              filteredPosts.map((post) => (
+                <PostCard
+                  key={post.id}
+                  post={post}
+                  users={users}
+                  currentUserId={user.id}
+                  followingIds={followingIds}
+                  feedLabel={getFeedLabel(post)}
+                  onToggleLike={() => handleToggleLike(post.id)}
+                  onAddComment={handleAddComment}
+                  onToggleFollow={handleToggleFollow}
+                />
+              ))
+            )}
+          </div>
+        </main>
 
         <SideBar
           currentUser={currentUser}
+          suggestions={suggestions}
           onToggleFollow={handleToggleFollow}
-          users={users}
+          onSelectFeedTab={setFeedMode}
+          onStatClick={handleOpenFollowModal}
         />
+      </div>
 
-      </main>
-
+      {showFollowModal && (
+        <FollowModal
+          userId={followModalUserId}
+          type={followModalType}
+          users={users}
+          onClose={() => setShowFollowModal(false)}
+          onUserClick={(targetId) => navigate(`/profile/${targetId}`)}
+        />
+      )}
     </div>
   )
 }
